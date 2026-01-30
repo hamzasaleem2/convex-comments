@@ -61,7 +61,7 @@ function App() {
           onChange={(e) => setCurrentUser(e.target.value)}
           style={{ padding: "4px 8px", marginLeft: "10px" }}
         >
-          {DEMO_USERS.map(user => (
+          {DEMO_USERS.map((user: string) => (
             <option key={user} value={user}>{user}</option>
           ))}
         </select>
@@ -495,7 +495,7 @@ function MessagesPanel({ threadId, currentUser }: { threadId: string; currentUse
               maxHeight: "150px",
               overflowY: "auto",
             }}>
-              {filteredMentionUsers.map((user, index) => (
+              {filteredMentionUsers.map((user, index: number) => (
                 <div
                   key={user.id}
                   onClick={() => insertMention(user)}
@@ -579,7 +579,7 @@ function MessagesPanel({ threadId, currentUser }: { threadId: string; currentUse
 
                 {/* Reactions */}
                 <div style={{ display: "flex", gap: "5px", flexWrap: "wrap", marginBottom: "10px" }}>
-                  {m.reactions.map((r) => (
+                  {m.reactions.map((r: { emoji: string; count: number; includesMe: boolean }) => (
                     <button
                       key={r.emoji}
                       onClick={() => handleReaction(m.message._id, r.emoji)}
