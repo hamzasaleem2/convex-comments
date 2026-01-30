@@ -1,0 +1,22 @@
+# Exclude tests and development files from the npm package
+**/*.test.ts
+**/*.test.tsx
+src/test.ts
+tsconfig*.json
+tsconfig*.tsbuildinfo
+vitest.config.js
+eslint.config.js
+.prettierrc.json
+example/
+explorations/
+.github/
+.vscode/
+.idea/
+*.log
+.DS_Store
+.env*
+convex.json
+convex.lock
+
+# Include dist even if it's in .gitignore
+!dist
