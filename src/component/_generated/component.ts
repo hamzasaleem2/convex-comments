@@ -191,6 +191,17 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         },
         Name
       >;
+      getOrCreateThread: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          metadata?: any;
+          position?: { anchor?: string; x: number; y: number };
+          zoneId: string;
+        },
+        string,
+        Name
+      >;
       getOrCreateZone: FunctionReference<
         "mutation",
         "internal",
@@ -604,6 +615,17 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         "internal",
         { threadId: string },
         { deletedMessages: number; deletedReactions: number },
+        Name
+      >;
+      getOrCreateThread: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          metadata?: any;
+          position?: { anchor?: string; x: number; y: number };
+          zoneId: string;
+        },
+        string,
         Name
       >;
       getThread: FunctionReference<

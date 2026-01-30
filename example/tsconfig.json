@@ -27,6 +27,9 @@
       "@hamzasaleemorg/convex-comments/convex.config": [
         "../src/component/convex.config.ts"
       ],
+      "@hamzasaleemorg/convex-comments/_generated/*": [
+        "../src/component/_generated/*"
+      ],
       "@hamzasaleemorg/convex-comments/*": [
         "../src/*"
       ]

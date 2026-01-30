@@ -32,6 +32,9 @@
       "@hamzasaleemorg/convex-comments/test": [
         "../../src/test.ts"
       ],
+      "@hamzasaleemorg/convex-comments/_generated/*": [
+        "../../src/component/_generated/*"
+      ],
       "@hamzasaleemorg/convex-comments/*": [
         "../../src/*"
       ]
