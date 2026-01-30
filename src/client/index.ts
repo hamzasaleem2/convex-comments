@@ -191,6 +191,26 @@ export class Comments {
   }
 
   /**
+   * Get or create a thread in a zone.
+   * 
+   * If `position` is omitted, it looks for the first "general" thread (no position).
+   * If `position` is provided, it looks for a thread that matches those exact coordinates.
+   * 
+   * This is extremely useful for simple comment sections where you just want one 
+   * "main" thread for a document or page.
+   */
+  async getOrCreateThread(
+    ctx: MutationCtx,
+    args: {
+      zoneId: string;
+      position?: { x: number; y: number; anchor?: string };
+      metadata?: unknown;
+    }
+  ): Promise<string> {
+    return await ctx.runMutation(this.component.lib.getOrCreateThread, args);
+  }
+
+  /**
    * Retrieves full details for a specific thread, including its position and resolution status.
    */
   async getThread(ctx: QueryCtx, args: { threadId: string }) {
@@ -610,6 +630,25 @@ export function exposeApi(
           includeResolved: args.includeResolved,
           cursor: args.cursor,
         });
+      },
+    }),
+
+    /** Get or create a thread. Access: create/write. */
+    getOrCreateThread: mutationGeneric({
+      args: {
+        zoneId: v.string(),
+        position: v.optional(
+          v.object({
+            x: v.number(),
+            y: v.number(),
+            anchor: v.optional(v.string()),
+          })
+        ),
+        metadata: v.optional(v.any()),
+      },
+      handler: async (ctx, args) => {
+        await options.auth(ctx, { type: "create", zoneId: args.zoneId });
+        return await ctx.runMutation(component.lib.getOrCreateThread, args);
       },
     }),
 

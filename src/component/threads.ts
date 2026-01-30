@@ -73,6 +73,51 @@ export const addThread = mutation({
 });
 
 /**
+ * Get or create a thread in a zone.
+ * Use this for "single-thread" comment sections or to ensure a thread exists.
+ */
+export const getOrCreateThread = mutation({
+    args: {
+        zoneId: v.id("zones"),
+        position: v.optional(positionValidator),
+        metadata: v.optional(v.any()),
+    },
+    returns: v.id("threads"),
+    handler: async (ctx, args) => {
+        // Build query to find matching thread
+        let query = ctx.db
+            .query("threads")
+            .withIndex("zoneId_lastActivity", (q) => q.eq("zoneId", args.zoneId));
+
+        const existingThreads = await query.collect();
+
+        // If no position specified, look for the first thread with no position
+        // This acts as the "General" discussion thread for a zone.
+        const existing = existingThreads.find(t => {
+            if (!args.position) return !t.position;
+            return t.position?.x === args.position.x &&
+                   t.position?.y === args.position.y &&
+                   t.position?.anchor === args.position.anchor;
+        });
+
+        if (existing) {
+            return existing._id;
+        }
+
+        // Otherwise create new
+        const now = Date.now();
+        return await ctx.db.insert("threads", {
+            zoneId: args.zoneId,
+            resolved: false,
+            createdAt: now,
+            lastActivityAt: now,
+            position: args.position,
+            metadata: args.metadata,
+        });
+    },
+});
+
+/**
  * Get a thread by ID.
  */
 export const getThread = query({

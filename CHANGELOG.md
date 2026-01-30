@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.2] - 2026-01-31
+
+### Added
+- New `getOrCreateThread` method to the `Comments` class and components. This simplifies the creation of "single-thread" comment sections for a specific entity.
+- Expanded "Quick Start" in README with a complete "Entity-to-Thread" example for easier onboarding.
+
+### Documentation
+- Improved React usage examples in README with better component patterns.
+
 ## [1.0.1] - 2026-01-31
 
 ### Fixed

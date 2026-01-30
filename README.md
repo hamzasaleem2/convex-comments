@@ -40,23 +40,28 @@ import { components } from "./_generated/api";
 
 const comments = new Comments(components.comments);
 
-// Create a zone for an entity (e.g., a document)
-export const createZone = mutation({
+/**
+ * Get or create the comment thread for a document.
+ * This is the "Zero-to-One" function that handles the initial setup.
+ */
+export const getThreadForDocument = mutation({
   args: { documentId: v.string() },
   handler: async (ctx, args) => {
-    return await comments.getOrCreateZone(ctx, { 
+    // 1. Ensure the "Zone" (container) exists for this doc
+    const zoneId = await comments.getOrCreateZone(ctx, { 
       entityId: args.documentId 
     });
+
+    // 2. Ensure a "General" thread exists in that zone
+    const threadId = await comments.getOrCreateThread(ctx, { zoneId });
+    
+    return threadId;
   },
 });
 
-// Add a comment
+// Add a comment to a thread
 export const addComment = mutation({
-  args: { 
-    threadId: v.string(), 
-    userId: v.string(), 
-    body: v.string() 
-  },
+  args: { threadId: v.string(), userId: v.string(), body: v.string() },
   handler: async (ctx, args) => {
     return await comments.addComment(ctx, {
       threadId: args.threadId,
@@ -66,45 +71,74 @@ export const addComment = mutation({
   },
 });
 
-// Get messages in a thread
+// Get messages for the UI
 export const getMessages = query({
   args: { threadId: v.string() },
   handler: async (ctx, args) => {
-    return await comments.getMessages(ctx, { 
-      threadId: args.threadId 
-    });
+    return await comments.getMessages(ctx, { threadId: args.threadId });
   },
 });
 ```
 
 **2. Use in React:**
 
-```typescript
+```tsx
 import { useMutation, useQuery } from "convex/react";
+import { useEffect, useState } from "react";
 import { api } from "../convex/_generated/api";
 
-function CommentThread({ threadId, userId }) {
-  const messages = useQuery(api.comments.getMessages, { threadId });
+function CommentSection({ documentId, userId }) {
+  const [threadId, setThreadId] = useState<string | null>(null);
+  const setupThread = useMutation(api.comments.getThreadForDocument);
+  
+  // 1. Initialize the thread for this document
+  useEffect(() => {
+    setupThread({ documentId }).then(setThreadId);
+  }, [documentId]);
+
+  // 2. Load the messages once we have a threadId
+  const messages = useQuery(
+    api.comments.getMessages, 
+    threadId ? { threadId } : "skip"
+  );
   const addComment = useMutation(api.comments.addComment);
 
+  if (!threadId || !messages) return <div>Loading...</div>;
+
   return (
-    <div>
-      {messages?.messages.map((msg) => (
-        <div key={msg.message._id}>
-          <strong>{msg.message.authorId}:</strong> {msg.message.body}
-        </div>
-      ))}
+    <div className="comment-section">
+      <h3>Comments ({messages.messages.length})</h3>
+      <div className="message-list">
+        {messages.messages.map((msg) => (
+          <div key={msg.message._id}>
+            <strong>{msg.message.authorId}:</strong> {msg.message.body}
+          </div>
+        ))}
+      </div>
+      
       <button onClick={() => 
-        addComment({ threadId, userId, body: "Hello!" })
+        addComment({ threadId, userId, body: "Hello world!" })
       }>
-        Add Comment
+        Post Comment
       </button>
     </div>
   );
 }
 ```
 
-**That's it!** You now have threaded comments with mentions, reactions, and typing indicators available.
+**That's it!** You now have a functional comment thread for any entity in your application.
+
+---
+
+## 🛠️ The "Standard" Setup
+
+In most applications, you want to show a single list of comments for a specific page or resource. The pattern above is the fastest way to achieve this using our `getOrCreate` helpers:
+
+1.  **Entity ID**: Use your existing `postId`, `docId`, or `pageId`.
+2.  **`getOrCreateZone`**: Maps your ID to the component's internal storage.
+3.  **`getOrCreateThread`**: Ensures there's a conversation ready to receive messages.
+
+If you are building something more complex, like **positioned comments** (annotations on a PDF or a canvas), see the [Positioned Comments](#positioned-comments-optional) section.
 
 See below for the complete API reference and React components.
 

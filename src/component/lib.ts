@@ -22,6 +22,7 @@ export {
 
 export {
   addThread,
+  getOrCreateThread,
   getThread,
   getThreads,
   resolveThread,
