@@ -6,7 +6,7 @@ import "./App.css";
 // Simple demo app to test all comments component functionalities
 // No fancy colors, just functional UI
 
-
+type Zone = { _id: string; entityId: string; createdAt: number };
 type Thread = {
   thread: {
     _id: string;
@@ -197,7 +197,7 @@ function ZonesPanel({ onSelectZone }: { onSelectZone: (id: string) => void }) {
               </tr>
             </thead>
             <tbody>
-              {zones.map((z) => (
+              {zones.map((z: Zone) => (
                 <tr key={z._id} style={{ borderBottom: "1px solid #ddd" }}>
                   <td style={{ padding: "8px" }}><code>{z.entityId}</code></td>
                   <td style={{ padding: "8px" }}><code>{z._id}</code></td>
