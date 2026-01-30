@@ -1,5 +1,9 @@
 # Convex Comments Component
 
+[![npm version](https://img.shields.io/npm/v/@hamzasaleemorg/convex-comments.svg)](https://www.npmjs.com/package/@hamzasaleemorg/convex-comments)
+[![npm downloads](https://img.shields.io/npm/dm/@hamzasaleemorg/convex-comments.svg)](https://www.npmjs.com/package/@hamzasaleemorg/convex-comments)
+[![License](https://img.shields.io/npm/l/@hamzasaleemorg/convex-comments.svg)](https://www.npmjs.com/package/@hamzasaleemorg/convex-comments)
+
 A comments system for Convex with threads, mentions, reactions, and typing indicators. Includes backend functions and optional React UI components.
 
 ## Installation
