@@ -24,6 +24,9 @@
       "@hamzasaleemorg/convex-comments/react": [
         "../src/react/index.ts"
       ],
+      "@hamzasaleemorg/convex-comments/convex.config": [
+        "../src/component/convex.config.ts"
+      ],
       "@hamzasaleemorg/convex-comments/*": [
         "../src/*"
       ]

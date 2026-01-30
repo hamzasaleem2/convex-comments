@@ -26,6 +26,12 @@
       "@hamzasaleemorg/convex-comments": [
         "../../src/client/index.ts"
       ],
+      "@hamzasaleemorg/convex-comments/convex.config": [
+        "../../src/component/convex.config.ts"
+      ],
+      "@hamzasaleemorg/convex-comments/test": [
+        "../../src/test.ts"
+      ],
       "@hamzasaleemorg/convex-comments/*": [
         "../../src/*"
       ]
