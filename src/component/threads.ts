@@ -85,7 +85,7 @@ export const getOrCreateThread = mutation({
     returns: v.id("threads"),
     handler: async (ctx, args) => {
         // Build query to find matching thread
-        let query = ctx.db
+        const query = ctx.db
             .query("threads")
             .withIndex("zoneId_lastActivity", (q) => q.eq("zoneId", args.zoneId));
 
@@ -96,8 +96,8 @@ export const getOrCreateThread = mutation({
         const existing = existingThreads.find(t => {
             if (!args.position) return !t.position;
             return t.position?.x === args.position.x &&
-                   t.position?.y === args.position.y &&
-                   t.position?.anchor === args.position.anchor;
+                t.position?.y === args.position.y &&
+                t.position?.anchor === args.position.anchor;
         });
 
         if (existing) {
