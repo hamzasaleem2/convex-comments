@@ -1,6 +1,9 @@
 {
   "name": "@hamzasaleemorg/convex-comments",
   "description": "A full-featured comments component for Convex with threads, mentions, reactions, and real-time typing indicators.",
+  "workspaces": [
+    "example"
+  ],
   "repository": "github:hamzasaleem2/convex-comments",
   "homepage": "https://github.com/hamzasaleem2/convex-comments#readme",
   "bugs": {
