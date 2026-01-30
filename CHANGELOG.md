@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.1] - 2026-01-31
+
+### Fixed
+- Replaced `@your-org/comments` placeholders in JSDoc examples with the correct package name `@hamzasaleemorg/convex-comments`.
+
+### Documentation
+- Significant enrichment of JSDoc comments for the entire client library.
+- Added detailed usage context, best practices, and permission reminders to all public methods.
+- Expanded code examples for `Comments` class, `exposeApi`, and `registerRoutes`.
+
 ## [1.0.0] - 2026-01-31
 
 ### Added

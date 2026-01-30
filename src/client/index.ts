@@ -82,10 +82,15 @@ interface MentionCallbacks {
  *
  * Usage:
  * ```ts
- * import { Comments } from "@your-org/comments";
+ * import { Comments } from "@hamzasaleemorg/convex-comments";
  * import { components } from "./_generated/api";
  *
- * const comments = new Comments(components.comments);
+ * const comments = new Comments(components.comments, {
+ *   onMention: async ({ mentionedUserId, authorId, body }) => {
+ *     // Send email or push notification to the mentioned user
+ *     console.log(`${authorId} mentioned ${mentionedUserId}: ${body}`);
+ *   }
+ * });
  *
  * // In a mutation/query handler:
  * const zoneId = await comments.getOrCreateZone(ctx, { entityId: "doc_123" });
@@ -103,7 +108,18 @@ export class Comments {
   // ==========================================================================
 
   /**
-   * Get or create a zone for an entity.
+   * Get or create a "Zone" for a specific entity.
+   * 
+   * A Zone is the top-level container for all threads and messages related to a specific
+   * resource in your app (e.g., a specific document ID, a task ID, or a project page).
+   * 
+   * This method uses a "get or create" pattern, making it ideal for lazy-initializing
+   * the comment system for an entity the first time a user interacts with it.
+   * 
+   * @param ctx - The mutation context (requires runMutation)
+   * @param args.entityId - A unique string identifying your resource (e.g., "doc_123")
+   * @param args.metadata - Optional arbitrary data to store with the zone
+   * @returns The unique ID of the zone
    */
   async getOrCreateZone(
     ctx: MutationCtx,
@@ -113,21 +129,33 @@ export class Comments {
   }
 
   /**
-   * Get a zone by entity ID (without creating).
+   * Retrieves an existing zone by its entity ID.
+   * 
+   * Unlike `getOrCreateZone`, this will return `null` if the zone doesn't exist yet.
+   * Use this when you want to check if an entity has any comments without creating a container.
+   * 
+   * @param ctx - The query context
+   * @param args.entityId - The unique resource identifier
    */
   async getZone(ctx: QueryCtx, args: { entityId: string }) {
     return await ctx.runQuery(this.component.lib.getZone, args);
   }
 
   /**
-   * Get a zone by its ID.
+   * Retrieves a zone by its internal Convex ID.
+   * 
+   * Useful when you already have a `zoneId` (e.g., from a thread reference) and 
+   * need to fetch its associated metadata or entity identifier.
    */
   async getZoneById(ctx: QueryCtx, args: { zoneId: string }) {
     return await ctx.runQuery(this.component.lib.getZoneById, { zoneId: args.zoneId });
   }
 
   /**
-   * Delete a zone and all its contents.
+   * Permanently deletes a zone and every thread, message, and reaction within it.
+   * 
+   * This is a destructive operation often used when the parent resource 
+   * (e.g., a document) is being deleted from your system.
    */
   async deleteZone(ctx: MutationCtx, args: { zoneId: string }) {
     return await ctx.runMutation(this.component.lib.deleteZone, { zoneId: args.zoneId });
@@ -138,7 +166,14 @@ export class Comments {
   // ==========================================================================
 
   /**
-   * Create a new thread in a zone.
+   * Creates a new conversation thread within a specific zone.
+   * 
+   * Threads act as a grouping for related messages. They support "positioned" 
+   * comments (e.g., pins on a PDF or coordinates on a canvas) via the `position` argument.
+   * 
+   * @param args.zoneId - The ID of the zone to contain this thread
+   * @param args.position - Optional coordinates {x, y} and an anchor point for UI placement
+   * @param args.metadata - Optional data (e.g., the specific version of a document)
    */
   async addThread(
     ctx: MutationCtx,
@@ -156,14 +191,19 @@ export class Comments {
   }
 
   /**
-   * Get a thread by ID.
+   * Retrieves full details for a specific thread, including its position and resolution status.
    */
   async getThread(ctx: QueryCtx, args: { threadId: string }) {
     return await ctx.runQuery(this.component.lib.getThread, { threadId: args.threadId });
   }
 
   /**
-   * Get all threads in a zone with pagination.
+   * Lists threads within a zone, typically used for a "Sidebar" or "Activity" view.
+   * 
+   * Supports pagination and filtering by resolution status.
+   * 
+   * @param args.includeResolved - If true, returns both open and resolved threads. Defaults to false.
+   * @param args.limit - Maximum number of threads to return in one page.
    */
   async getThreads(
     ctx: QueryCtx,
@@ -183,7 +223,11 @@ export class Comments {
   }
 
   /**
-   * Resolve a thread.
+   * Marks a thread as resolved.
+   * 
+   * Resolved threads are effectively "closed" and are hidden from the default `getThreads` view.
+   * 
+   * @param args.userId - The ID of the user who resolved the thread.
    */
   async resolveThread(
     ctx: MutationCtx,
@@ -193,14 +237,16 @@ export class Comments {
   }
 
   /**
-   * Unresolve a thread.
+   * Re-opens a previously resolved thread.
    */
   async unresolveThread(ctx: MutationCtx, args: { threadId: string }) {
     return await ctx.runMutation(this.component.lib.unresolveThread, args);
   }
 
   /**
-   * Update thread position.
+   * Updates the visual position of a thread. 
+   * 
+   * Useful for "draggable" comment pins or when the underlying content changes layout.
    */
   async updateThreadPosition(
     ctx: MutationCtx,
@@ -213,7 +259,7 @@ export class Comments {
   }
 
   /**
-   * Delete a thread and all its messages.
+   * Permanently deletes a thread and all its messages.
    */
   async deleteThread(ctx: MutationCtx, args: { threadId: string }) {
     return await ctx.runMutation(this.component.lib.deleteThread, { threadId: args.threadId });
@@ -224,8 +270,16 @@ export class Comments {
   // ==========================================================================
 
   /**
-   * Add a comment to a thread.
-   * Returns the message ID and parsed mentions/links.
+   * Adds a new comment (message) to a thread.
+   * 
+   * This method automatically parses the body for `@user` mentions and URLs.
+   * If the `Comments` client was initialized with callbacks, `onNewMessage` and 
+   * `onMention` will be triggered automatically.
+   * 
+   * @param args.authorId - The ID of the user sending the comment
+   * @param args.body - The text content (supports markdown)
+   * @param args.attachments - Optional array of file/url attachments
+   * @returns The generated message ID and the list of detected mentions/links
    */
   async addComment(
     ctx: MutationCtx,
@@ -269,7 +323,10 @@ export class Comments {
   }
 
   /**
-   * Get a single message with reactions.
+   * Fetches a specific message, including its reaction and resolution status.
+   * 
+   * @param args.currentUserId - Optional. If provided, the response will include 
+   *                             `includesMe` flags for reactions.
    */
   async getMessage(
     ctx: QueryCtx,
@@ -279,7 +336,12 @@ export class Comments {
   }
 
   /**
-   * Get messages in a thread with pagination.
+   * Retrieves a paginated list of messages for a thread.
+   * 
+   * Typically used to populate the main comment list for a conversation.
+   * 
+   * @param args.order - "asc" for chronological (chat style) or "desc" for newest first.
+   * @param args.includeDeleted - If true, includes placeholders for deleted messages.
    */
   async getMessages(
     ctx: QueryCtx,
@@ -296,7 +358,9 @@ export class Comments {
   }
 
   /**
-   * Edit a message.
+   * Edits the content of an existing message.
+   * 
+   * The message will be marked as `isEdited: true`.
    */
   async editMessage(
     ctx: MutationCtx,
@@ -306,7 +370,9 @@ export class Comments {
   }
 
   /**
-   * Soft delete a message.
+   * Soft-deletes a message. 
+   * 
+   * The message record remains but its `body` is cleared and `isDeleted` is set to true.
    */
   async deleteMessage(
     ctx: MutationCtx,
@@ -320,7 +386,7 @@ export class Comments {
   // ==========================================================================
 
   /**
-   * Add a reaction to a message.
+   * Adds an emoji reaction to a message for a specific user.
    */
   async addReaction(
     ctx: MutationCtx,
@@ -330,7 +396,7 @@ export class Comments {
   }
 
   /**
-   * Remove a reaction from a message.
+   * Removes an emoji reaction from a message.
    */
   async removeReaction(
     ctx: MutationCtx,
@@ -340,7 +406,8 @@ export class Comments {
   }
 
   /**
-   * Toggle a reaction (add if not present, remove if present).
+   * Toggles a reaction. If the user already reacted with this emoji, 
+   * it removes it; otherwise, it adds it.
    */
   async toggleReaction(
     ctx: MutationCtx,
@@ -350,7 +417,7 @@ export class Comments {
   }
 
   /**
-   * Get all reactions for a message.
+   * Retrieves a summary of all reactions for a message.
    */
   async getReactions(
     ctx: QueryCtx,
@@ -364,7 +431,17 @@ export class Comments {
   // ==========================================================================
 
   /**
-   * Set typing indicator for a user in a thread.
+   * Updates the "isTyping" status for a user in a specific thread.
+   * 
+   * This is used to drive real-time typing indicators in your UI. The typing status 
+   * automatically expires after a short period (typically 5-10 seconds of inactivity).
+   * 
+   * For the best user experience, call this whenever the user types a character 
+   * (debounced) or when the input field loses focus.
+   * 
+   * @param args.threadId - Internal ID of the thread
+   * @param args.userId - The ID of the user who is typing
+   * @param args.isTyping - true to show as typing, false to immediately clear
    */
   async setIsTyping(
     ctx: MutationCtx,
@@ -374,7 +451,12 @@ export class Comments {
   }
 
   /**
-   * Get all users currently typing in a thread.
+   * Returns a list of user IDs currently typing in a thread.
+   * 
+   * Use this in a reactive query to show "User A, User B are typing..." in your UI.
+   * 
+   * @param args.excludeUserId - Optional. Exclude the current user from the list to avoid 
+   *                             showing an "I am typing" indicator to yourself.
    */
   async getTypingUsers(
     ctx: QueryCtx,
@@ -384,14 +466,23 @@ export class Comments {
   }
 
   /**
-   * Clear all typing indicators for a user.
+   * Immediately clears all typing indicators for a specific user across all threads.
+   * 
+   * Useful to call when a user logs out or closes their browser tab to ensure 
+   * typing indicators don't linger for the timeout duration.
    */
   async clearUserTyping(ctx: MutationCtx, args: { userId: string }) {
     return await ctx.runMutation(this.component.lib.clearUserTyping, args);
   }
 
   /**
-   * Resolve a message.
+   * Resolves an individual message. 
+   * 
+   * While `resolveThread` marks an entire conversation as closed, `resolveMessage` 
+   * is useful for "task-style" comments where each message might represent a 
+   * specific action item that can be checked off.
+   * 
+   * @param args.userId - The ID of the user who resolved the message.
    */
   async resolveMessage(
     ctx: MutationCtx,
@@ -401,7 +492,7 @@ export class Comments {
   }
 
   /**
-   * Unresolve a message.
+   * Re-opens a previously resolved message.
    */
   async unresolveMessage(ctx: MutationCtx, args: { messageId: string }) {
     return await ctx.runMutation(this.component.lib.unresolveMessage, args);
@@ -421,19 +512,24 @@ export class Comments {
  * Usage:
  * ```ts
  * // In convex/comments.ts
- * import { exposeApi } from "@your-org/comments";
+ * import { exposeApi } from "@hamzasaleemorg/convex-comments";
  * import { components } from "./_generated/api";
  *
- * export const { getThreads, addComment, toggleReaction } = exposeApi(
+ * export const { getThreads, addComment, toggleReaction, setIsTyping } = exposeApi(
  *   components.comments,
  *   {
  *     auth: async (ctx, operation) => {
- *       const userId = await getAuthUserId(ctx);
- *       if (!userId && operation.type !== "read") {
+ *       const identity = await ctx.auth.getUserIdentity();
+ *       if (!identity && operation.type !== "read") {
  *         throw new Error("Authentication required");
  *       }
- *       return userId ?? "anonymous";
+ *       return identity?.subject ?? "anonymous";
  *     },
+ *     callbacks: {
+ *       onMention: async ({ mentionedUserId }) => {
+ *         // Handle notification logic here
+ *       }
+ *     }
  *   }
  * );
  * ```
@@ -448,7 +544,7 @@ export function exposeApi(
   }
 ) {
   return {
-    // Zone queries/mutations
+    /** Initialize or fetch a zone for an entity. Access: create/admin. */
     getOrCreateZone: mutationGeneric({
       args: { entityId: v.string(), metadata: v.optional(v.any()) },
       handler: async (ctx, args) => {
@@ -457,6 +553,7 @@ export function exposeApi(
       },
     }),
 
+    /** Get zone by entity ID. Access: read. */
     getZone: queryGeneric({
       args: { entityId: v.string() },
       handler: async (ctx, args) => {
@@ -465,7 +562,7 @@ export function exposeApi(
       },
     }),
 
-    // Thread queries/mutations
+    /** Start a new thread. Access: create/write. */
     addThread: mutationGeneric({
       args: {
         zoneId: v.string(),
@@ -488,6 +585,7 @@ export function exposeApi(
       },
     }),
 
+    /** Fetch single thread details. Access: read. */
     getThread: queryGeneric({
       args: { threadId: v.string() },
       handler: async (ctx, args) => {
@@ -496,6 +594,7 @@ export function exposeApi(
       },
     }),
 
+    /** List threads in a zone. Access: read. */
     getThreads: queryGeneric({
       args: {
         zoneId: v.string(),
@@ -514,6 +613,7 @@ export function exposeApi(
       },
     }),
 
+    /** Close a thread. Access: update/owner. */
     resolveThread: mutationGeneric({
       args: { threadId: v.string() },
       handler: async (ctx, args) => {
@@ -525,6 +625,7 @@ export function exposeApi(
       },
     }),
 
+    /** Re-open a thread. Access: update/owner. */
     unresolveThread: mutationGeneric({
       args: { threadId: v.string() },
       handler: async (ctx, args) => {
@@ -533,7 +634,7 @@ export function exposeApi(
       },
     }),
 
-    // Message queries/mutations
+    /** Post a new comment. Access: write. Mentions are parsed automatically. */
     addComment: mutationGeneric({
       args: {
         threadId: v.string(),
@@ -585,6 +686,7 @@ export function exposeApi(
       },
     }),
 
+    /** Fetch single message. Access: read. */
     getMessage: queryGeneric({
       args: { messageId: v.string() },
       handler: async (ctx, args) => {
@@ -596,6 +698,7 @@ export function exposeApi(
       },
     }),
 
+    /** Fetch conversation history. Access: read. */
     getMessages: queryGeneric({
       args: {
         threadId: v.string(),
@@ -617,6 +720,7 @@ export function exposeApi(
       },
     }),
 
+    /** Update message content. Access: update/owner. */
     editMessage: mutationGeneric({
       args: { messageId: v.string(), body: v.string() },
       handler: async (ctx, args) => {
@@ -629,6 +733,7 @@ export function exposeApi(
       },
     }),
 
+    /** Soft-delete message. Access: delete/owner. */
     deleteMessage: mutationGeneric({
       args: { messageId: v.string() },
       handler: async (ctx, args) => {
@@ -640,7 +745,7 @@ export function exposeApi(
       },
     }),
 
-    // Reactions
+    /** Add/remove reaction. Access: react. */
     toggleReaction: mutationGeneric({
       args: { messageId: v.string(), emoji: v.string() },
       handler: async (ctx, args) => {
@@ -653,6 +758,7 @@ export function exposeApi(
       },
     }),
 
+    /** List reactions for message. Access: read. */
     getReactions: queryGeneric({
       args: { messageId: v.string() },
       handler: async (ctx, args) => {
@@ -664,7 +770,7 @@ export function exposeApi(
       },
     }),
 
-    // Typing indicators
+    /** Signal typing intent. Access: write. Indicators expire automatically. */
     setIsTyping: mutationGeneric({
       args: { threadId: v.string(), isTyping: v.boolean() },
       handler: async (ctx, args) => {
@@ -677,6 +783,7 @@ export function exposeApi(
       },
     }),
 
+    /** List current typists. Access: read. */
     getTypingUsers: queryGeneric({
       args: { threadId: v.string() },
       handler: async (ctx, args) => {
@@ -698,18 +805,22 @@ export function exposeApi(
  * Register HTTP routes for the Comments component.
  *
  * Provides REST-like endpoints for the comments API:
- * - GET /comments/zones/:entityId - Get zone by entity ID
- * - GET /comments/threads/:zoneId - Get threads in a zone
- * - GET /comments/messages/:threadId - Get messages in a thread
+ * - GET /comments/zones?entityId=...
+ * - GET /comments/threads?zoneId=...
+ * - GET /comments/messages?threadId=...
  *
  * Usage:
  * ```ts
  * // In convex/http.ts
- * import { registerRoutes } from "@your-org/comments";
+ * import { httpRouter } from "convex/server";
+ * import { registerRoutes } from "@hamzasaleemorg/convex-comments";
  * import { components } from "./_generated/api";
  *
  * const http = httpRouter();
+ *
+ * // Mount the comments API at /api/comments/*
  * registerRoutes(http, components.comments, { pathPrefix: "/api/comments" });
+ *
  * export default http;
  * ```
  */
